@@ -14,7 +14,7 @@ services:
       - key: HANDYAI_JWT_SECRET
         generateValue: true
       - key: HANDYAI_CORS_ALLOWED_ORIGINS
-        value: https://handyai-frontend.vercel.app
+        value: https://ib11.vercel.app
       - key: HANDYAI_ADMIN_EMAIL
         sync: false
       - key: HANDYAI_ADMIN_PASSWORD
