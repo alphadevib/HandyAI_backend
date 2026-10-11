@@ -1,3 +1,11 @@
 [submodule "agy_mcp"]
 	path = agy_mcp
 	url = https://github.com/Dheerax/agy_mcp.git
+[submodule "frontend"]
+	path = frontend
+	url = https://github.com/alphadevib/HandyAI-frontend.git
+	branch = main
+[submodule "backend/handy-ai"]
+	path = backend/handy-ai
+	url = https://github.com/alphadevib/HandyAI-backend.git
+	branch = main
