@@ -16,4 +16,7 @@ COPY --from=build /app/app.jar app.jar
 USER handyai
 ENV SPRING_PROFILES_ACTIVE=prod
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
+# Sized for a 512 MB instance (Render's free plan). Classes, compiled code and thread stacks need
+# about 200 MB outside the heap, so a 75% heap let the process grow past the limit under load and
+# get killed. A 40% heap with the serial collector keeps the worst case near 400 MB.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=40", "-XX:+UseSerialGC", "-Xss512k", "-XX:ReservedCodeCacheSize=64m", "-XX:MaxMetaspaceSize=160m", "-jar", "app.jar"]
