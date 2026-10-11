@@ -70,6 +70,40 @@ public class User {
     @Column(name = "token_version", nullable = false)
     private int tokenVersion;
 
+    /** New sign-ups start unconfirmed when email verification is on; existing users are confirmed. */
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = true;
+
+    @Column(name = "email_token_hash", length = 64)
+    private String emailTokenHash;
+
+    @Column(name = "email_token_sent_at")
+    private Instant emailTokenSentAt;
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
+    public String getEmailTokenHash() {
+        return emailTokenHash;
+    }
+
+    public void setEmailTokenHash(String emailTokenHash) {
+        this.emailTokenHash = emailTokenHash;
+    }
+
+    public Instant getEmailTokenSentAt() {
+        return emailTokenSentAt;
+    }
+
+    public void setEmailTokenSentAt(Instant emailTokenSentAt) {
+        this.emailTokenSentAt = emailTokenSentAt;
+    }
+
     public int getTokenVersion() {
         return tokenVersion;
     }

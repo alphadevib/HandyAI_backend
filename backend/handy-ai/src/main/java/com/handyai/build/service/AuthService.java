@@ -13,6 +13,7 @@ import com.handyai.build.dto.LoginRequest;
 import com.handyai.build.dto.RegisterRequest;
 import com.handyai.build.dto.UserResponse;
 import com.handyai.build.exception.ConflictException;
+import com.handyai.build.exception.EmailNotVerifiedException;
 import com.handyai.build.exception.ResourceNotFoundException;
 import com.handyai.build.exception.UnauthorizedException;
 import com.handyai.build.repository.UserRepository;
@@ -33,23 +34,37 @@ public class AuthService {
     private final OrganisationVerifier organisationVerifier;
     private final LoginThrottle loginThrottle;
     private final TokenVersions tokenVersions;
+    private final EmailVerificationService emailVerification;
 
     public AuthService(UserRepository userRepository, PasswordHasher passwordHasher,
                        JwtService jwtService, OrganisationVerifier organisationVerifier,
-                       LoginThrottle loginThrottle, TokenVersions tokenVersions) {
+                       LoginThrottle loginThrottle, TokenVersions tokenVersions,
+                       EmailVerificationService emailVerification) {
         this.userRepository = userRepository;
         this.passwordHasher = passwordHasher;
         this.jwtService = jwtService;
         this.organisationVerifier = organisationVerifier;
         this.loginThrottle = loginThrottle;
         this.tokenVersions = tokenVersions;
+        this.emailVerification = emailVerification;
     }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         String email = normaliseEmail(request.email());
-        if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new ConflictException("An account with this email already exists");
+        User existing = userRepository.findByEmailIgnoreCase(email).orElse(null);
+        if (existing != null) {
+            // An unconfirmed sign-up whose link has expired does not hold the address hostage:
+            // whoever can actually read that inbox may sign up again.
+            if (!existing.isEmailVerified() && emailVerification.linkExpired(existing)) {
+                userRepository.delete(existing);
+                userRepository.flush();
+            } else if (!existing.isEmailVerified()) {
+                throw new ConflictException("This email is waiting to be confirmed. Check your inbox, "
+                        + "or ask for a new link from the sign-in page.");
+            } else {
+                throw new ConflictException("An account with this email already exists");
+            }
         }
 
         User user = new User();
@@ -68,6 +83,12 @@ public class AuthService {
             user.setVerificationStatus(VerificationStatus.NOT_REQUIRED);
         }
 
+        if (emailVerification.required()) {
+            user.setEmailVerified(false);
+            boolean sent = emailVerification.issue(user);
+            userRepository.save(user);
+            return AuthResponse.pending(email, sent);
+        }
         User saved = userRepository.save(user);
         return tokenFor(saved);
     }
@@ -91,7 +112,38 @@ public class AuthService {
             throw new UnauthorizedException("Email or password is incorrect");
         }
         loginThrottle.recordSuccess(email, address);
+        if (!user.isEmailVerified()) {
+            throw new EmailNotVerifiedException("Confirm your email first: we sent a link to " + email
+                    + ". No email? Ask for a new link below.");
+        }
         return tokenFor(user);
+    }
+
+    /** Confirms the email from the emailed link and signs the user in. */
+    @Transactional
+    public AuthResponse verifyEmail(String token) {
+        User user = token == null || token.isBlank() ? null
+                : userRepository.findByEmailTokenHash(EmailVerificationService.hash(token.trim()))
+                        .orElse(null);
+        if (user == null || emailVerification.linkExpired(user)) {
+            throw new BadRequestException("This link has expired or was already used. Sign in to "
+                    + "ask for a new one.");
+        }
+        user.setEmailVerified(true);
+        user.setEmailTokenHash(null);
+        user.setEmailTokenSentAt(null);
+        return tokenFor(user);
+    }
+
+    /**
+     * Sends a fresh link to an unconfirmed account. Says nothing about whether the account exists,
+     * and sends at most one email a minute per account.
+     */
+    @Transactional
+    public void resendVerification(String rawEmail) {
+        userRepository.findByEmailIgnoreCase(normaliseEmail(rawEmail))
+                .filter(user -> !user.isEmailVerified() && emailVerification.mayResend(user))
+                .ifPresent(emailVerification::issue);
     }
 
     /** Signs the user out everywhere: every token issued so far stops working. */
@@ -173,7 +225,7 @@ public class AuthService {
     private AuthResponse tokenFor(User user) {
         String token = jwtService.issue(user.getId(), user.getEmail(), user.getRole().name(),
                 user.getTokenVersion());
-        return new AuthResponse(token, jwtService.getTtl().toSeconds(), UserResponse.from(user));
+        return AuthResponse.signedIn(token, jwtService.getTtl().toSeconds(), UserResponse.from(user));
     }
 
     private String normaliseEmail(String email) {

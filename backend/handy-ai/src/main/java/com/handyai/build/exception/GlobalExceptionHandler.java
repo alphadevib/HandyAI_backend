@@ -127,6 +127,13 @@ public class GlobalExceptionHandler {
         return status(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotVerified(EmailNotVerifiedException ex,
+                                                              HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiErrorResponse.coded(403,
+                "Forbidden", ex.getMessage(), request.getRequestURI(), EmailNotVerifiedException.CODE));
+    }
+
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<ApiErrorResponse> handleForbidden(ForbiddenException ex,
                                                             HttpServletRequest request) {

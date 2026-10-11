@@ -30,6 +30,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findTop8ByOrderByCreatedAtDesc();
 
+    Optional<User> findByEmailTokenHash(String emailTokenHash);
+
     @Query("select u.tokenVersion from User u where u.id = :id")
     Optional<Integer> findTokenVersion(@Param("id") Long id);
 }

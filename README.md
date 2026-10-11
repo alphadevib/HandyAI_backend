@@ -98,6 +98,9 @@ set these environment variables. The app refuses to start if a required one is m
 | `MYSQL_PORT`, `MYSQL_DB`, `MYSQL_SSL_MODE` | no | Default `3306`, `handyai`, `REQUIRED` |
 | `HANDYAI_ADMIN_EMAIL` | yes | The one admin account's email |
 | `HANDYAI_USD_TO_INR` | no | Rupee conversion rate, default `88` |
+| `BREVO_API_KEY` | no | Turns on email confirmation for new sign-ups (Brevo → SMTP & API → API keys) |
+| `MAIL_FROM` | with the key | A sender address verified in Brevo, e.g. `hello@yourdomain.com` |
+| `FRONTEND_URL` | no | Where confirmation links point; defaults to `https://ib11.vercel.app` |
 
 Check it with `https://<backend>/api/health`.
 
