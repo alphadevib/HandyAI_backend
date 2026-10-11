@@ -8,6 +8,8 @@ import com.handyai.build.domain.VerificationStatus;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Query;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
@@ -27,4 +29,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByAccountType(AccountType accountType);
 
     List<User> findTop8ByOrderByCreatedAtDesc();
+
+    @Query("select u.tokenVersion from User u where u.id = :id")
+    Optional<Integer> findTokenVersion(@Param("id") Long id);
 }

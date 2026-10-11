@@ -11,7 +11,18 @@ import java.util.Locale;
 public final class PriceBook {
 
     /** Fixed conversion rate used everywhere a rupee figure is derived from a dollar price. */
-    public static final double USD_TO_INR = 88.0;
+    public static final double USD_TO_INR = rateFromEnvironment();
+
+    /** HANDYAI_USD_TO_INR overrides the default 88.0 without a code change. */
+    private static double rateFromEnvironment() {
+        String value = System.getenv("HANDYAI_USD_TO_INR");
+        try {
+            double rate = value == null ? 88.0 : Double.parseDouble(value.trim());
+            return rate > 0 ? rate : 88.0;
+        } catch (NumberFormatException ex) {
+            return 88.0;
+        }
+    }
 
     private PriceBook() {
     }

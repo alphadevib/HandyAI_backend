@@ -60,4 +60,8 @@ public interface AiToolRepository extends JpaRepository<AiTool, Long> {
     List<AiTool> findByIdIn(List<Long> ids);
 
     long countByCategoryId(Long categoryId);
+
+    /** [categoryId, toolCount] for every category that has tools, in one query. */
+    @Query("select t.category.id, count(t) from AiTool t group by t.category.id")
+    List<Object[]> countPerCategory();
 }

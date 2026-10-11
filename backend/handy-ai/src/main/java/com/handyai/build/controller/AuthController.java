@@ -6,6 +6,7 @@ import com.handyai.build.dto.RegisterRequest;
 import com.handyai.build.dto.UserResponse;
 import com.handyai.build.security.CurrentUserProvider;
 import com.handyai.build.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
@@ -36,9 +37,17 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
+    /** The client address comes from the proxy's X-Forwarded-For in production. */
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+        return authService.login(request, http.getRemoteAddr());
+    }
+
+    /** Signs out everywhere: tokens issued before this call stop working. */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        authService.logout(currentUserProvider.requireUserId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")

@@ -37,8 +37,8 @@ only created locally; the production profile turns it off.
 
 ### The admin account
 
-There is exactly one admin, set by `handyai.admin.email` (default
-`syedibrahimahmed.dev@gmail.com`). On every start the backend creates that account if it is
+There is exactly one admin, set by `handyai.admin.email` (`HANDYAI_ADMIN_EMAIL`; locally it
+defaults to `admin@handyai.local`). On every start the backend creates that account if it is
 missing, gives it the configured password, and removes the admin role from anyone else. The
 admin's **Admin dashboard** (account menu → `/admin`) shows live users, purchase redirects,
 registrations and tracked subscriptions, refreshing every 5 seconds, plus organisation
@@ -66,6 +66,14 @@ Connection details come from `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DB`, `MYSQL_USER
 `src/main/resources/application-mysql.properties`. The seeder is idempotent, so restarting against
 a persistent database inserts only what is missing.
 
+### Database changes
+
+The schema is managed by Flyway: every change is a new numbered file in
+`backend/handy-ai/src/main/resources/db/migration` (`V3__what_changed.sql`, ...), applied once on
+startup. Hibernate only validates that the entities match, and refuses to start if they do not.
+An existing database without migration history is baselined at `V1` (the schema as it was when
+migrations were introduced).
+
 ### Tests
 
 ```bash
@@ -85,10 +93,11 @@ set these environment variables. The app refuses to start if a required one is m
 | --- | --- | --- |
 | `HANDYAI_JWT_SECRET` | yes | 32+ random characters, e.g. `openssl rand -base64 48` |
 | `HANDYAI_ADMIN_PASSWORD` | yes | The admin's password |
-| `HANDYAI_CORS_ALLOWED_ORIGINS` | yes | Your Vercel URL(s), comma separated, e.g. `https://handyai.vercel.app` |
+| `HANDYAI_CORS_ALLOWED_ORIGINS` | yes | Your Vercel URL(s), comma separated; `*` patterns allowed for preview deployments, e.g. `https://ib11.vercel.app,https://ib11-*-yourteam.vercel.app` |
 | `MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD` | yes | From your MySQL provider |
 | `MYSQL_PORT`, `MYSQL_DB`, `MYSQL_SSL_MODE` | no | Default `3306`, `handyai`, `REQUIRED` |
-| `HANDYAI_ADMIN_EMAIL` | no | Defaults to `syedibrahimahmed.dev@gmail.com` |
+| `HANDYAI_ADMIN_EMAIL` | yes | The one admin account's email |
+| `HANDYAI_USD_TO_INR` | no | Rupee conversion rate, default `88` |
 
 Check it with `https://<backend>/api/health`.
 

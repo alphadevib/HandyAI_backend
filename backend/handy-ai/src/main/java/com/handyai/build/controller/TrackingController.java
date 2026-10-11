@@ -7,7 +7,10 @@ import com.handyai.build.repository.AiToolRepository;
 import com.handyai.build.repository.OutboundClickRepository;
 import com.handyai.build.security.CurrentUserProvider;
 import com.handyai.build.service.PresenceService;
+import com.handyai.build.support.RecentKeys;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import jakarta.validation.constraints.Size;
 import java.net.URI;
 import java.util.Map;
@@ -33,6 +36,8 @@ public class TrackingController {
     private final AiToolRepository toolRepository;
     private final OutboundClickRepository clickRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final RecentKeys clickDeduper = new RecentKeys(50_000);
+    static final Duration CLICK_WINDOW = Duration.ofMinutes(10);
 
     public TrackingController(PresenceService presenceService, AiToolRepository toolRepository,
                               OutboundClickRepository clickRepository,
@@ -44,9 +49,11 @@ public class TrackingController {
     }
 
     @PostMapping("/presence")
-    public Map<String, Object> heartbeat(@Valid @RequestBody Heartbeat heartbeat) {
+    public Map<String, Object> heartbeat(@Valid @RequestBody Heartbeat heartbeat,
+                                         HttpServletRequest request) {
         boolean ok = presenceService.heartbeat(heartbeat.visitorId(),
-                currentUserProvider.currentUserId().orElse(null), heartbeat.path());
+                currentUserProvider.currentUserId().orElse(null), heartbeat.path(),
+                request.getRemoteAddr());
         return Map.of("ok", ok);
     }
 
@@ -58,9 +65,17 @@ public class TrackingController {
     @GetMapping("/go/{slug}")
     public ResponseEntity<Void> go(@PathVariable String slug,
                                    @RequestParam(name = "src", required = false) String source,
-                                   @RequestParam(name = "v", required = false) String visitorId) {
+                                   @RequestParam(name = "v", required = false) String visitorId,
+                                   HttpServletRequest request) {
         AiTool tool = toolRepository.findBySlug(slug)
                 .orElseThrow(() -> ResourceNotFoundException.of("Tool", slug));
+        // Repeat clicks (or a script hammering the link) within the window count once, so the
+        // admin numbers reflect people rather than requests. The redirect always happens.
+        String who = (visitorId != null && !visitorId.isBlank() ? visitorId : request.getRemoteAddr())
+                + "|" + tool.getId();
+        if (!clickDeduper.firstIn(who, CLICK_WINDOW)) {
+            return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(tool.getWebsiteUrl())).build();
+        }
         OutboundClick click = new OutboundClick();
         click.setTool(tool);
         click.setSource(source != null && SOURCES.contains(source) ? source : "card");

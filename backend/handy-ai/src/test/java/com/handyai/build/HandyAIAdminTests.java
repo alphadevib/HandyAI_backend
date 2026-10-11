@@ -50,7 +50,7 @@ class HandyAIAdminTests {
     void onlyTheConfiguredEmailIsAdmin() throws Exception {
         User admin = userRepository.findByEmailIgnoreCase("owner@handyai.test").orElseThrow();
         assertThat(admin.getRole()).isEqualTo(Role.ADMIN);
-        assertThat(authService.login(new LoginRequest("owner@handyai.test", "owner-secret-1"))
+        assertThat(authService.login(new LoginRequest("owner@handyai.test", "owner-secret-1"), "192.0.2.1")
                 .user().role()).isEqualTo("ADMIN");
 
         // Someone else holding the role is demoted on the next start.
@@ -73,14 +73,17 @@ class HandyAIAdminTests {
                 "Teacher"));
         for (int attempt = 0; attempt < 5; attempt++) {
             assertThatThrownBy(() -> authService.login(
-                    new LoginRequest("guessed@handyai.test", "wrong-guess")))
+                    new LoginRequest("guessed@handyai.test", "wrong-guess"), "203.0.113.50"))
                     .isInstanceOf(UnauthorizedException.class);
         }
-        // Locked now, even with the right password.
+        // Locked now from that address, even with the right password...
         assertThatThrownBy(() -> authService.login(
-                new LoginRequest("guessed@handyai.test", "supersecret")))
+                new LoginRequest("guessed@handyai.test", "supersecret"), "203.0.113.50"))
                 .isInstanceOf(TooManyRequestsException.class)
                 .hasMessageContaining("minutes");
+        // ...but the guesser cannot lock the owner out from everywhere else.
+        assertThat(authService.login(new LoginRequest("guessed@handyai.test", "supersecret"),
+                "198.51.100.20").user().email()).isEqualTo("guessed@handyai.test");
     }
 
     @Test
@@ -109,9 +112,9 @@ class HandyAIAdminTests {
         authService.register(new RegisterRequest("Counter", "counter@handyai.test", "supersecret",
                 "Teacher"));
 
-        assertThat(presenceService.heartbeat("visitor-guest-0001", null, "/")).isTrue();
-        assertThat(presenceService.heartbeat("visitor-member-001", 1L, "/marketplace")).isTrue();
-        assertThat(presenceService.heartbeat("bad id!", null, "/")).isFalse();
+        assertThat(presenceService.heartbeat("visitor-guest-0001", null, "/", "192.0.2.10")).isTrue();
+        assertThat(presenceService.heartbeat("visitor-member-001", 1L, "/marketplace", "192.0.2.11")).isTrue();
+        assertThat(presenceService.heartbeat("bad id!", null, "/", "192.0.2.12")).isFalse();
 
         AdminStatsService.Stats stats = statsService.stats();
         assertThat(stats.users().total()).isEqualTo(before + 1);

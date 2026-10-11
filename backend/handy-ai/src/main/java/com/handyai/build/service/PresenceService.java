@@ -22,7 +22,10 @@ public class PresenceService {
     private static final int MAX_TRACKED = 100_000;
     private static final Pattern VISITOR_ID = Pattern.compile("^[A-Za-z0-9-]{8,64}$");
 
-    public record Visitor(Long userId, Instant lastSeen, String path) {
+    /** Live visitor ids one address may hold, so a script cannot inflate the live count. */
+    static final int MAX_VISITORS_PER_ADDRESS = 20;
+
+    public record Visitor(Long userId, Instant lastSeen, String path, String address) {
     }
 
     public record LiveCount(int total, int signedIn, int guests) {
@@ -31,7 +34,7 @@ public class PresenceService {
     private final Map<String, Visitor> visitors = new ConcurrentHashMap<>();
 
     /** Returns false for an id that does not look like one the frontend generates. */
-    public boolean heartbeat(String visitorId, Long userId, String path) {
+    public boolean heartbeat(String visitorId, Long userId, String path, String address) {
         if (visitorId == null || !VISITOR_ID.matcher(visitorId).matches()) {
             return false;
         }
@@ -41,8 +44,11 @@ public class PresenceService {
                 return false;
             }
         }
+        if (!visitors.containsKey(visitorId) && liveFrom(address) >= MAX_VISITORS_PER_ADDRESS) {
+            return false;
+        }
         String cleanPath = path == null ? null : path.length() > 120 ? path.substring(0, 120) : path;
-        visitors.put(visitorId, new Visitor(userId, Instant.now(), cleanPath));
+        visitors.put(visitorId, new Visitor(userId, Instant.now(), cleanPath, address));
         return true;
     }
 
@@ -69,6 +75,16 @@ public class PresenceService {
             }
         }
         return new LiveCount(total, signedIn, total - signedIn);
+    }
+
+    private long liveFrom(String address) {
+        if (address == null) {
+            return 0;
+        }
+        Instant now = Instant.now();
+        return visitors.values().stream()
+                .filter(visitor -> address.equals(visitor.address()) && isLive(visitor, now))
+                .count();
     }
 
     private void prune() {

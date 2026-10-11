@@ -17,8 +17,9 @@ services:
         value: prod
       - key: HANDYAI_JWT_SECRET
         generateValue: true
+      # The live site plus its Vercel preview deployments.
       - key: HANDYAI_CORS_ALLOWED_ORIGINS
-        value: https://ib11.vercel.app
+        value: https://ib11.vercel.app,https://ib11-*-neuron27.vercel.app
       - key: HANDYAI_ADMIN_EMAIL
         sync: false
       - key: HANDYAI_ADMIN_PASSWORD

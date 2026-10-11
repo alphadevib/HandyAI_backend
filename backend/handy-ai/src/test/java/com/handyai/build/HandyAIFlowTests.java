@@ -62,11 +62,11 @@ class HandyAIFlowTests {
                 .satisfies(user -> assertThat(user.userId()).isEqualTo(registered.user().id()));
 
         AuthResponse loggedIn = authService.login(
-                new LoginRequest("FLOW@handyai.test", "supersecret"));
+                new LoginRequest("FLOW@handyai.test", "supersecret"), "192.0.2.30");
         assertThat(loggedIn.user().id()).isEqualTo(registered.user().id());
 
         assertThatThrownBy(() -> authService.login(
-                new LoginRequest("flow@handyai.test", "wrong-password")))
+                new LoginRequest("flow@handyai.test", "wrong-password"), "192.0.2.30"))
                 .isInstanceOf(UnauthorizedException.class);
 
         assertThatThrownBy(() -> authService.register(new RegisterRequest(

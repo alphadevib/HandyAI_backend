@@ -66,6 +66,18 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
+    /** Bumped when the user signs out; tokens carrying an older version are refused. */
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion;
+
+    public int getTokenVersion() {
+        return tokenVersion;
+    }
+
+    public void setTokenVersion(int tokenVersion) {
+        this.tokenVersion = tokenVersion;
+    }
+
     public Long getId() {
         return id;
     }

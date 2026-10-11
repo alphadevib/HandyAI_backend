@@ -19,6 +19,7 @@ import com.handyai.build.repository.UserRepository;
 import com.handyai.build.exception.TooManyRequestsException;
 import com.handyai.build.security.JwtService;
 import com.handyai.build.security.LoginThrottle;
+import com.handyai.build.security.TokenVersions;
 import com.handyai.build.security.PasswordHasher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,15 +32,17 @@ public class AuthService {
     private final JwtService jwtService;
     private final OrganisationVerifier organisationVerifier;
     private final LoginThrottle loginThrottle;
+    private final TokenVersions tokenVersions;
 
     public AuthService(UserRepository userRepository, PasswordHasher passwordHasher,
                        JwtService jwtService, OrganisationVerifier organisationVerifier,
-                       LoginThrottle loginThrottle) {
+                       LoginThrottle loginThrottle, TokenVersions tokenVersions) {
         this.userRepository = userRepository;
         this.passwordHasher = passwordHasher;
         this.jwtService = jwtService;
         this.organisationVerifier = organisationVerifier;
         this.loginThrottle = loginThrottle;
+        this.tokenVersions = tokenVersions;
     }
 
     @Transactional
@@ -74,9 +77,9 @@ public class AuthService {
      * costs CPU but never holds a row lock.
      */
     @Transactional(readOnly = true)
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, String address) {
         String email = normaliseEmail(request.email());
-        long locked = loginThrottle.minutesLocked(email);
+        long locked = loginThrottle.minutesLocked(email, address);
         if (locked > 0) {
             throw new TooManyRequestsException("Too many wrong passwords. Try again in " + locked
                     + (locked == 1 ? " minute." : " minutes."));
@@ -84,11 +87,19 @@ public class AuthService {
         User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
         if (user == null || !passwordHasher.matches(request.password(), user.getPasswordHash())) {
             // Unknown emails count too, so the lockout does not reveal which accounts exist.
-            loginThrottle.recordFailure(email);
+            loginThrottle.recordFailure(email, address);
             throw new UnauthorizedException("Email or password is incorrect");
         }
-        loginThrottle.recordSuccess(email);
+        loginThrottle.recordSuccess(email, address);
         return tokenFor(user);
+    }
+
+    /** Signs the user out everywhere: every token issued so far stops working. */
+    @Transactional
+    public void logout(Long userId) {
+        User user = loadUser(userId);
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        tokenVersions.forget(userId);
     }
 
     @Transactional(readOnly = true)
@@ -160,7 +171,8 @@ public class AuthService {
     }
 
     private AuthResponse tokenFor(User user) {
-        String token = jwtService.issue(user.getId(), user.getEmail(), user.getRole().name());
+        String token = jwtService.issue(user.getId(), user.getEmail(), user.getRole().name(),
+                user.getTokenVersion());
         return new AuthResponse(token, jwtService.getTtl().toSeconds(), UserResponse.from(user));
     }
 

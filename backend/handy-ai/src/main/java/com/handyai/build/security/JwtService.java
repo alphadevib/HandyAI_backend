@@ -46,12 +46,13 @@ public class JwtService {
         return ttl;
     }
 
-    public String issue(Long userId, String email, String role) {
+    public String issue(Long userId, String email, String role, int tokenVersion) {
         Instant now = Instant.now();
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("sub", String.valueOf(userId));
         payload.put("email", email);
         payload.put("role", role);
+        payload.put("ver", tokenVersion);
         payload.put("iat", now.getEpochSecond());
         payload.put("exp", now.plus(ttl).getEpochSecond());
 
@@ -83,7 +84,7 @@ public class JwtService {
             }
             long userId = Long.parseLong(payload.path("sub").asString());
             return Optional.of(new AuthenticatedUser(userId, payload.path("email").asString(),
-                    payload.path("role").asString("USER")));
+                    payload.path("role").asString("USER"), payload.path("ver").asInt(0)));
         } catch (IllegalArgumentException | tools.jackson.core.JacksonException ex) {
             return Optional.empty();
         }
