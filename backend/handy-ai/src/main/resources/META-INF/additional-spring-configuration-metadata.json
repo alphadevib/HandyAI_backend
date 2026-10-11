@@ -1,0 +1,37 @@
+{
+  "properties": [
+    {
+      "name": "handyai.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Key that signs login tokens. At least 32 characters; set HANDYAI_JWT_SECRET in production."
+    },
+    {
+      "name": "handyai.jwt.ttl-minutes",
+      "type": "java.lang.Integer",
+      "description": "How long a login token stays valid, in minutes.",
+      "defaultValue": 720
+    },
+    {
+      "name": "handyai.admin.email",
+      "type": "java.lang.String",
+      "description": "Email of the one admin account. Any other account holding the admin role is demoted on start.",
+      "defaultValue": "syedibrahimahmed.dev@gmail.com"
+    },
+    {
+      "name": "handyai.admin.password",
+      "type": "java.lang.String",
+      "description": "Password of the admin account. Never commit it: use HANDYAI_ADMIN_PASSWORD or the git-ignored config/application.properties. Blank means no admin account is created."
+    },
+    {
+      "name": "handyai.cors.allowed-origins",
+      "type": "java.lang.String",
+      "description": "Comma separated origins allowed to call the API, e.g. the Vercel domain."
+    },
+    {
+      "name": "handyai.seed.demo-user",
+      "type": "java.lang.Boolean",
+      "description": "Create the demo account demo@handyai.app on start. Off in the prod profile.",
+      "defaultValue": true
+    }
+  ]
+}

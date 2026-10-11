@@ -4,12 +4,13 @@ The marketplace for AI tools. Compare 39 platforms by price across monthly, quar
 plans, get picks for your profession, ask the AI Chat (typed or spoken), and track every AI
 subscription you pay for in one place.
 
-- `backend/handy-ai` — Spring Boot 4.1 REST API (Java 17, JPA, H2 locally, MySQL in production)
-- `frontend` — React 19 + Vite single page app, deployable to Vercel
+This repository is the backend: `backend/handy-ai`, a Spring Boot 4.1 REST API (Java 17, JPA, H2
+locally, MySQL in production). The React 19 + Vite frontend lives in its own repository,
+[HandyAI_frontend](https://github.com/alphadevib/HandyAI_frontend).
 
 ## Running it
 
-Two terminals. The backend first.
+Two terminals. The backend first (from this repo).
 
 ```bash
 cd backend/handy-ai
@@ -19,8 +20,10 @@ cd backend/handy-ai
 It starts on <http://localhost:8080> with an in-memory H2 database and seeds 13 categories and
 39 tools on first run. Nothing to install or configure.
 
+Then the frontend, from a clone of HandyAI_frontend:
+
 ```bash
-cd frontend
+cd HandyAI_frontend
 npm install
 npm run dev
 ```
@@ -67,7 +70,7 @@ a persistent database inserts only what is missing.
 
 ```bash
 cd backend/handy-ai && ./mvnw test
-cd frontend && npm run lint && npm run build
+cd HandyAI_frontend && npm run lint && npm run build
 ```
 
 ## Deploying
@@ -89,7 +92,7 @@ set these environment variables. The app refuses to start if a required one is m
 
 Check it with `https://<backend>/api/health`.
 
-**2. Frontend** — import the repo in Vercel with **Root Directory** `frontend` (the included
+**2. Frontend** — import the HandyAI_frontend repo in Vercel (the included
 `vercel.json` sets the build and makes page refreshes work on every route) and add the
 environment variable `VITE_API_BASE_URL=https://<backend>/api`. Redeploy after changing it: Vite
 bakes it in at build time.
@@ -104,8 +107,8 @@ backend `api.handyai.tech` through your backend host's custom-domain setting and
 
 ### Releasing a new version
 
-1. Bump `"version"` in `frontend/package.json` (e.g. `2.1.0`).
-2. Add an entry at the top of `frontend/src/releases.js` with the same version, a title and the
+1. Bump `"version"` in `package.json` of HandyAI_frontend (e.g. `2.1.0`).
+2. Add an entry at the top of `src/releases.js` in HandyAI_frontend with the same version, a title and the
    highlights.
 3. Push; Vercel deploys.
 

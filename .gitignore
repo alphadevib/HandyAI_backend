@@ -6,7 +6,6 @@ backend/handy-ai/config/
 
 # Build output
 backend/**/target/
-frontend/dist/
 
 # Editor and OS files
 .idea/

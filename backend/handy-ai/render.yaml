@@ -1,0 +1,29 @@
+# Render Blueprint: New > Blueprint > pick this repo. Builds the Dockerfile and runs the prod profile.
+services:
+  - type: web
+    name: handyai-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: HANDYAI_JWT_SECRET
+        generateValue: true
+      - key: HANDYAI_CORS_ALLOWED_ORIGINS
+        value: https://handyai-frontend.vercel.app
+      - key: HANDYAI_ADMIN_EMAIL
+        sync: false
+      - key: HANDYAI_ADMIN_PASSWORD
+        sync: false
+      - key: MYSQL_HOST
+        sync: false
+      - key: MYSQL_PORT
+        sync: false
+      - key: MYSQL_DB
+        sync: false
+      - key: MYSQL_USER
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
