@@ -1,10 +1,12 @@
-# Render Blueprint: New > Blueprint > pick this repo. Builds the Dockerfile and runs the prod profile.
+# Render Blueprint: New > Blueprint > pick this repo. Builds backend/handy-ai/Dockerfile and runs the
+# prod profile. Render only reads this file from the repository root.
 services:
   - type: web
     name: handyai-backend
     runtime: docker
     plan: free
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./backend/handy-ai/Dockerfile
+    dockerContext: ./backend/handy-ai
     healthCheckPath: /api/health
     envVars:
       - key: SPRING_PROFILES_ACTIVE
