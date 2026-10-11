@@ -8,6 +8,10 @@ services:
     dockerfilePath: ./backend/handy-ai/Dockerfile
     dockerContext: ./backend/handy-ai
     healthCheckPath: /api/health
+    # Rebuild only when the API itself changes, not for workflow or README commits.
+    buildFilter:
+      paths:
+        - backend/handy-ai/**
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
