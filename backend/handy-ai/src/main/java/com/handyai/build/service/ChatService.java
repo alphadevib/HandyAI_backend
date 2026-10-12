@@ -1,5 +1,6 @@
 package com.handyai.build.service;
 
+import com.handyai.build.ai.ChatAssistant;
 import com.handyai.build.domain.PriceBook.Currency;
 import com.handyai.build.domain.ProfessionCatalog;
 import com.handyai.build.dto.ChatRequest;
@@ -20,7 +21,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * A conversational front end to the recommendation engine, with no external AI service.
@@ -75,14 +75,19 @@ public class ChatService {
 
     private final RecommendationService recommendationService;
     private final UserRepository userRepository;
+    private final ChatAssistant chatAssistant;
 
     public ChatService(RecommendationService recommendationService,
-                       UserRepository userRepository) {
+                       UserRepository userRepository, ChatAssistant chatAssistant) {
         this.recommendationService = recommendationService;
         this.userRepository = userRepository;
+        this.chatAssistant = chatAssistant;
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * Not transactional on purpose: the Claude call can take seconds, and holding a pooled
+     * database connection for it would starve other requests. Each lookup runs in its own.
+     */
     public ChatResponse reply(ChatRequest request, Long currentUserId) {
         Context previous = request.context() == null ? Context.empty() : request.context();
         String original = request.message().trim();
@@ -188,10 +193,15 @@ public class ChatService {
                 : new Context(goal, profession, freePlanOnly, maxMonthly, currency.name(),
                         List.copyOf(nowShown));
 
-        return new ChatResponse(
-                replyText(picks, result.summary(), goal, effectiveProfession, freePlanOnly,
-                        maxMonthly, currency, wantsMore),
-                picks, context, suggestions(context, effectiveProfession, picks.isEmpty()));
+        String reply = replyText(picks, result.summary(), goal, effectiveProfession, freePlanOnly,
+                maxMonthly, currency, wantsMore);
+        // With an Anthropic key configured, Claude rewrites the reply from the retrieved tools.
+        reply = chatAssistant.compose(new ChatAssistant.Turn(original, goal, effectiveProfession,
+                        freePlanOnly, maxMonthly, currency,
+                        picks.stream().map(Recommendation::tool).toList()))
+                .orElse(reply);
+        return new ChatResponse(reply, picks, context,
+                suggestions(context, effectiveProfession, picks.isEmpty()));
     }
 
     private ChatResponse conversational(String reply, Context context) {

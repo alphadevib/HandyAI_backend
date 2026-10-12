@@ -1,5 +1,6 @@
 package com.handyai.build.config;
 
+import com.handyai.build.ai.ToolVectorIndex;
 import com.handyai.build.domain.AiTool;
 import com.handyai.build.domain.Category;
 import com.handyai.build.domain.PriceBook;
@@ -37,18 +38,21 @@ public class CatalogueSeeder implements ApplicationRunner {
     private final UserRepository userRepository;
     private final PasswordHasher passwordHasher;
     private final boolean seedDemoUser;
+    private final ToolVectorIndex vectorIndex;
 
     public CatalogueSeeder(CategoryRepository categoryRepository, AiToolRepository toolRepository,
                            UserRepository userRepository, PasswordHasher passwordHasher,
-                           @Value("${handyai.seed.demo-user:true}") boolean seedDemoUser) {
+                           @Value("${handyai.seed.demo-user:true}") boolean seedDemoUser,
+                           ToolVectorIndex vectorIndex) {
         this.categoryRepository = categoryRepository;
         this.toolRepository = toolRepository;
         this.userRepository = userRepository;
         this.passwordHasher = passwordHasher;
         this.seedDemoUser = seedDemoUser;
+        this.vectorIndex = vectorIndex;
     }
 
-    /** New tools change the category counts and price bands, so both caches start over. */
+    /** New tools change the category counts, price bands and embeddings, so all start over. */
     @Override
     @CacheEvict(cacheNames = {CacheConfig.CATEGORIES, CacheConfig.PRICE_RANGES}, allEntries = true)
     @Transactional
@@ -57,6 +61,7 @@ public class CatalogueSeeder implements ApplicationRunner {
         int inserted = seedTools(categories);
         seedPrices();
         seedDemoUser();
+        vectorIndex.invalidate();
         log.info("Catalogue ready: {} categories, {} tools ({} new this start)",
                 categoryRepository.count(), toolRepository.count(), inserted);
     }

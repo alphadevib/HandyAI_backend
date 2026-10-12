@@ -1,5 +1,6 @@
 package com.handyai.build.service;
 
+import com.handyai.build.ai.ToolVectorIndex;
 import com.handyai.build.config.CacheConfig;
 import com.handyai.build.domain.AiTool;
 import com.handyai.build.domain.PriceBook.Currency;
@@ -17,7 +18,10 @@ import com.handyai.build.repository.UserRepository;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.core.TypedPropertyPath;
 import org.springframework.data.domain.Page;
@@ -37,15 +41,17 @@ public class ToolService {
     private final FavoriteRepository favoriteRepository;
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
+    private final ToolVectorIndex vectorIndex;
 
     public ToolService(AiToolRepository toolRepository, CategoryRepository categoryRepository,
                        FavoriteRepository favoriteRepository, ReviewRepository reviewRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository, ToolVectorIndex vectorIndex) {
         this.toolRepository = toolRepository;
         this.categoryRepository = categoryRepository;
         this.favoriteRepository = favoriteRepository;
         this.reviewRepository = reviewRepository;
         this.userRepository = userRepository;
+        this.vectorIndex = vectorIndex;
     }
 
     /** Browsing without the marketplace's price filters. */
@@ -123,6 +129,51 @@ public class ToolService {
                         PageRequest.of(0, clamp(limit, 1, MAX_PAGE_SIZE))).stream()
                 .map(tool -> ToolResponse.from(tool, favorites.contains(tool.getId())))
                 .toList();
+    }
+
+    /**
+     * Search by meaning rather than by matching words: the query is embedded and compared with
+     * every tool's embedding, so "clean up my podcast audio" finds audio tools that never use the
+     * word "podcast". Best match first, each with its cosine similarity.
+     */
+    @Transactional(readOnly = true)
+    public List<SemanticMatch> semanticSearch(String query, int limit, Long currentUserId) {
+        if (query == null || query.isBlank()) {
+            throw new BadRequestException("Describe what you are looking for");
+        }
+        List<ToolVectorIndex.Hit> hits = vectorIndex.search(query.trim(),
+                clamp(limit, 1, MAX_PAGE_SIZE), List.of());
+        Map<Long, ToolResponse> tools = toolsFor(hits, currentUserId);
+        return hits.stream()
+                .filter(hit -> tools.containsKey(hit.toolId()))
+                .map(hit -> new SemanticMatch(tools.get(hit.toolId()),
+                        Math.round(hit.score() * 1000) / 1000d))
+                .toList();
+    }
+
+    /** The tools whose embeddings sit closest to this one's: "people also look at". */
+    @Transactional(readOnly = true)
+    public List<ToolResponse> similar(String slug, int limit, Long currentUserId) {
+        if (!toolRepository.existsBySlug(slug)) {
+            throw ResourceNotFoundException.of("Tool", slug);
+        }
+        List<ToolVectorIndex.Hit> hits = vectorIndex.similarTo(slug, clamp(limit, 1, MAX_PAGE_SIZE));
+        Map<Long, ToolResponse> tools = toolsFor(hits, currentUserId);
+        return hits.stream().map(hit -> tools.get(hit.toolId())).filter(tool -> tool != null).toList();
+    }
+
+    public record SemanticMatch(ToolResponse tool, double score) {
+    }
+
+    private Map<Long, ToolResponse> toolsFor(List<ToolVectorIndex.Hit> hits, Long currentUserId) {
+        if (hits.isEmpty()) {
+            return Map.of();
+        }
+        Set<Long> favorites = favoriteIds(currentUserId);
+        return toolRepository.findByIdIn(hits.stream().map(ToolVectorIndex.Hit::toolId).toList())
+                .stream()
+                .map(tool -> ToolResponse.from(tool, favorites.contains(tool.getId())))
+                .collect(Collectors.toMap(ToolResponse::id, Function.identity()));
     }
 
     @Transactional(readOnly = true)

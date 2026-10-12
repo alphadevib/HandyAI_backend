@@ -32,6 +32,9 @@ services:
         value: https://ib11.vercel.app
       - key: HANDYAI_ADMIN_PASSWORD
         sync: false
+      # Claude-written chat replies; leave empty to keep the rule-based replies.
+      - key: HANDYAI_ANTHROPIC_API_KEY
+        sync: false
       - key: MYSQL_HOST
         sync: false
       - key: MYSQL_PORT

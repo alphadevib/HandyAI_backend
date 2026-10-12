@@ -74,6 +74,19 @@ public class ToolController {
         return toolService.trending(limit, currentUserId());
     }
 
+    /** Meaning-based search over tool embeddings, e.g. ?q=turn my notes into slides. */
+    @GetMapping("/semantic-search")
+    public List<ToolService.SemanticMatch> semanticSearch(@RequestParam String q,
+                                                          @RequestParam(defaultValue = "8") int limit) {
+        return toolService.semanticSearch(q, limit, currentUserId());
+    }
+
+    @GetMapping("/{slug}/similar")
+    public List<ToolResponse> similar(@PathVariable String slug,
+                                      @RequestParam(defaultValue = "4") int limit) {
+        return toolService.similar(slug, limit, currentUserId());
+    }
+
     @GetMapping("/{slug}")
     public ToolResponse detail(@PathVariable String slug) {
         return toolService.getBySlug(slug, currentUserId());

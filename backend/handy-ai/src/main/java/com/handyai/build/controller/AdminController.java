@@ -1,5 +1,6 @@
 package com.handyai.build.controller;
 
+import com.handyai.build.ai.AiUsageMeter;
 import com.handyai.build.dto.UserResponse;
 import com.handyai.build.service.AdminService;
 import com.handyai.build.service.AdminStatsService;
@@ -23,16 +24,25 @@ public class AdminController {
 
     private final AdminService adminService;
     private final AdminStatsService statsService;
+    private final AiUsageMeter aiUsageMeter;
 
-    public AdminController(AdminService adminService, AdminStatsService statsService) {
+    public AdminController(AdminService adminService, AdminStatsService statsService,
+                           AiUsageMeter aiUsageMeter) {
         this.adminService = adminService;
         this.statsService = statsService;
+        this.aiUsageMeter = aiUsageMeter;
     }
 
     /** Live users, registrations, purchase redirects and tracked plans; the dashboard polls it. */
     @GetMapping("/stats")
     public AdminStatsService.Stats stats() {
         return statsService.stats();
+    }
+
+    /** Today's Claude tokens and estimated cost against the daily budget. */
+    @GetMapping("/ai-usage")
+    public AiUsageMeter.Snapshot aiUsage() {
+        return aiUsageMeter.snapshot();
     }
 
     @GetMapping("/organisations")
