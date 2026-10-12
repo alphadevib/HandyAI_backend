@@ -20,8 +20,9 @@ import org.hibernate.annotations.Formula;
 /**
  * A single AI platform/tool that can be recommended to a user.
  *
- * <p>Relations are deliberately uni-directional and lazy: no entity owns a collection of another
- * entity, which keeps every read a single predictable query and makes recursive JSON impossible.
+ * <p>Relations are lazy, and only DTOs are ever serialised, which makes recursive JSON impossible.
+ * {@link Category#getTools()} is the inverse side of the category link below; it is read only for
+ * the "for you" feed and never on the catalogue's hot paths.
  */
 @Entity
 @Table(name = "ai_tools", indexes = {

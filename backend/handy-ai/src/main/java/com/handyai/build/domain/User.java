@@ -6,9 +6,15 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -79,6 +85,21 @@ public class User {
 
     @Column(name = "email_token_sent_at")
     private Instant emailTokenSentAt;
+
+    /**
+     * Categories the user follows, which drive their "for you" feed. Many users follow many
+     * categories, through the user_interests join table; this side owns it. Lazy, and never put
+     * in a response directly (UserResponse and CategoryResponse are), so it cannot recurse.
+     */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "user_interests",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id"))
+    private Set<Category> interests = new HashSet<>();
+
+    public Set<Category> getInterests() {
+        return interests;
+    }
 
     public boolean isEmailVerified() {
         return emailVerified;

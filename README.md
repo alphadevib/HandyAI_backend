@@ -66,6 +66,19 @@ Connection details come from `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DB`, `MYSQL_USER
 `src/main/resources/application-mysql.properties`. The seeder is idempotent, so restarting against
 a persistent database inserts only what is missing.
 
+### Docker Compose (API + MySQL container)
+
+```bash
+cd backend/handy-ai
+docker compose up --build
+```
+
+Builds the API image from the `Dockerfile` and starts it with its own MySQL 8.4 container. The
+API waits until MySQL reports healthy. The API is on <http://localhost:8080> and MySQL on
+`localhost:3307`; data is kept in the `mysql-data` volume (`docker compose down -v` removes it).
+Set `HANDYAI_ADMIN_PASSWORD` or `HANDYAI_ANTHROPIC_API_KEY` in your shell or a `.env` file next to
+`docker-compose.yml` to pass them in.
+
 ### Database changes
 
 The schema is managed by Flyway: every change is a new numbered file in

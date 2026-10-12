@@ -69,11 +69,11 @@ public class ChatAssistant {
         this.properties = properties;
     }
 
-    public Optional<String> compose(Turn turn) {
+    public Optional<ClaudeClient.Reply> compose(Turn turn) {
         if (!claude.available()) {
             return Optional.empty();
         }
-        return claude.complete(SYSTEM_PROMPT, userMessage(turn)).map(ClaudeClient.Reply::text);
+        return claude.complete(SYSTEM_PROMPT, userMessage(turn));
     }
 
     String userMessage(Turn turn) {

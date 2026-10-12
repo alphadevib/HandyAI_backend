@@ -1,0 +1,54 @@
+# The API and its own MySQL in containers, for running HandyAI locally the way it runs in production:
+#
+#   cd backend/handy-ai
+#   docker compose up --build
+#
+# The API is then on http://localhost:8080 and MySQL on localhost:3307 (3307 so it never clashes
+# with a MySQL already installed on the machine). Data lives in the "mysql-data" volume and survives
+# restarts; "docker compose down -v" deletes it. Every setting below can be overridden from the shell
+# or a .env file next to this one, e.g. HANDYAI_ADMIN_PASSWORD or HANDYAI_ANTHROPIC_API_KEY.
+name: handyai
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: handyai
+      MYSQL_USER: handyai
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-handyai-dev-password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-handyai-dev-root}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    # The API waits for this, so Flyway never runs against a database that is still starting.
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  api:
+    build: .
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # The "mysql" profile: a local MySQL without TLS, demo account included.
+      SPRING_PROFILES_ACTIVE: mysql
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB: handyai
+      MYSQL_USER: handyai
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-handyai-dev-password}
+      HANDYAI_JWT_SECRET: ${HANDYAI_JWT_SECRET:-docker-compose-development-secret-key-32+}
+      HANDYAI_ADMIN_PASSWORD: ${HANDYAI_ADMIN_PASSWORD:-}
+      HANDYAI_ANTHROPIC_API_KEY: ${HANDYAI_ANTHROPIC_API_KEY:-}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  mysql-data:

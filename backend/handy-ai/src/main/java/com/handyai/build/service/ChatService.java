@@ -1,6 +1,8 @@
 package com.handyai.build.service;
 
+import com.handyai.build.ai.AiUsageMeter;
 import com.handyai.build.ai.ChatAssistant;
+import com.handyai.build.ai.ClaudeClient;
 import com.handyai.build.domain.PriceBook.Currency;
 import com.handyai.build.domain.ProfessionCatalog;
 import com.handyai.build.dto.ChatRequest;
@@ -20,6 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 /**
@@ -76,12 +79,17 @@ public class ChatService {
     private final RecommendationService recommendationService;
     private final UserRepository userRepository;
     private final ChatAssistant chatAssistant;
+    private final PersonalisationService personalisationService;
+    private final AiUsageMeter usageMeter;
 
     public ChatService(RecommendationService recommendationService,
-                       UserRepository userRepository, ChatAssistant chatAssistant) {
+                       UserRepository userRepository, ChatAssistant chatAssistant,
+                       PersonalisationService personalisationService, AiUsageMeter usageMeter) {
         this.recommendationService = recommendationService;
         this.userRepository = userRepository;
         this.chatAssistant = chatAssistant;
+        this.personalisationService = personalisationService;
+        this.usageMeter = usageMeter;
     }
 
     /**
@@ -196,10 +204,13 @@ public class ChatService {
         String reply = replyText(picks, result.summary(), goal, effectiveProfession, freePlanOnly,
                 maxMonthly, currency, wantsMore);
         // With an Anthropic key configured, Claude rewrites the reply from the retrieved tools.
-        reply = chatAssistant.compose(new ChatAssistant.Turn(original, goal, effectiveProfession,
-                        freePlanOnly, maxMonthly, currency,
-                        picks.stream().map(Recommendation::tool).toList()))
-                .orElse(reply);
+        Optional<ClaudeClient.Reply> written = chatAssistant.compose(new ChatAssistant.Turn(
+                original, goal, effectiveProfession, freePlanOnly, maxMonthly, currency,
+                picks.stream().map(Recommendation::tool).toList()));
+        if (written.isPresent()) {
+            reply = written.get().text();
+            recordUsage(currentUserId, written.get());
+        }
         return new ChatResponse(reply, picks, context,
                 suggestions(context, effectiveProfession, picks.isEmpty()));
     }
@@ -273,6 +284,19 @@ public class ChatService {
             chips.add("I'm a student");
         }
         return chips;
+    }
+
+    private void recordUsage(Long userId, ClaudeClient.Reply reply) {
+        if (userId == null) {
+            return;
+        }
+        double cost = usageMeter.costUsd(reply.inputTokens(), reply.outputTokens());
+        try {
+            personalisationService.recordAiUsage(userId, reply.inputTokens(), reply.outputTokens(), cost);
+        } catch (DataIntegrityViolationException firstRowRace) {
+            // Another reply created this user's row a moment ago; now the update path applies.
+            personalisationService.recordAiUsage(userId, reply.inputTokens(), reply.outputTokens(), cost);
+        }
     }
 
     private String profileProfession(Long userId) {
