@@ -3,6 +3,7 @@ package com.handyai.build.controller;
 import com.handyai.build.security.CurrentUserProvider;
 import com.handyai.build.service.SuggestionService;
 import com.handyai.build.service.SuggestionService.SuggestionView;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Anyone can send a suggestion; only the admin can read or triage them. */
 @RestController
+@Tag(name = "Suggestions", description = "Feedback from anyone; triage by the admin.")
 @RequestMapping("/api")
 public class SuggestionController {
 

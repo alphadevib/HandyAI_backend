@@ -3,12 +3,14 @@ package com.handyai.build.controller;
 import com.handyai.build.dto.ToolResponse;
 import com.handyai.build.security.CurrentUserProvider;
 import com.handyai.build.service.FavoriteService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Favourites", description = "Tools the signed-in user saved.")
 @RequestMapping("/api/me/favorites")
 public class FavoriteController {
 

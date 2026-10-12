@@ -4,6 +4,7 @@ import com.handyai.build.ai.AiUsageMeter;
 import com.handyai.build.dto.UserResponse;
 import com.handyai.build.service.AdminService;
 import com.handyai.build.service.AdminStatsService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** The admin dashboard. Guests get a 401 and signed-in non-admins a 403 (GlobalExceptionHandler). */
 @RestController
+@Tag(name = "Admin", description = "Dashboard numbers, organisation reviews and Claude spend. Admin role only.")
 @RequestMapping("/api/admin")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {

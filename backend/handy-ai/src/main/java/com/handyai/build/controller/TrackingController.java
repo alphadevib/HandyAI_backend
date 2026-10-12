@@ -7,6 +7,7 @@ import com.handyai.build.security.CurrentUserProvider;
 import com.handyai.build.service.ClickTracker;
 import com.handyai.build.service.PresenceService;
 import com.handyai.build.support.RecentKeys;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Duration;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Live presence and the purchase hand-off to vendor sites. Both are open to guests. */
 @RestController
+@Tag(name = "Tracking", description = "Live-visitor heartbeats and outbound purchase redirects.")
 @RequestMapping("/api")
 public class TrackingController {
 

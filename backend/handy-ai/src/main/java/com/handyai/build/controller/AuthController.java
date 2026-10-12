@@ -6,6 +6,7 @@ import com.handyai.build.dto.RegisterRequest;
 import com.handyai.build.dto.UserResponse;
 import com.handyai.build.security.CurrentUserProvider;
 import com.handyai.build.service.AuthService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Auth", description = "Sign-up, email confirmation, sign-in (returns a JWT) and the profile.")
 @RequestMapping("/api/auth")
 @Validated
 public class AuthController {

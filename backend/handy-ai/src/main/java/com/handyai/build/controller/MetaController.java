@@ -4,6 +4,7 @@ import com.handyai.build.domain.PriceBook;
 import com.handyai.build.domain.ProfessionCatalog;
 import com.handyai.build.dto.StatsResponse;
 import com.handyai.build.service.ToolService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Meta", description = "Health check, public counts, professions and exchange rate.")
 @RequestMapping("/api")
 public class MetaController {
 

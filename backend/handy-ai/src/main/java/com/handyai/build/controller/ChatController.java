@@ -4,6 +4,7 @@ import com.handyai.build.dto.ChatRequest;
 import com.handyai.build.dto.ChatResponse;
 import com.handyai.build.security.CurrentUserProvider;
 import com.handyai.build.service.ChatService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Chat", description = "The assistant: one turn in, a reply and tool picks out.")
 @RequestMapping("/api/chat")
 public class ChatController {
 

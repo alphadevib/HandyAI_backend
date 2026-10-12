@@ -8,6 +8,7 @@ import com.handyai.build.security.CurrentUserProvider;
 import com.handyai.build.service.FavoriteService;
 import com.handyai.build.service.ReviewService;
 import com.handyai.build.service.ToolService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Tools", description = "The catalogue: search, semantic search, details, similar tools, reviews.")
 @RequestMapping("/api/tools")
 public class ToolController {
 

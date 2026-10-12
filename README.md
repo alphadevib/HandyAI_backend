@@ -160,6 +160,16 @@ reported back without an affiliate programme.
 Everything lives under `/api`. Browsing is public; anything tied to a person needs
 `Authorization: Bearer <token>` from register or login.
 
+**Interactive docs.** With the backend running, Swagger UI is at
+<http://localhost:8080/swagger-ui.html> and the OpenAPI 3 description at
+<http://localhost:8080/v3/api-docs>, generated from the controllers. Sign in with
+`POST /api/auth/login`, press *Authorize* and paste the token to try the signed-in endpoints.
+
+**Postman.** Import `postman/HandyAI.postman_collection.json`: every endpoint, grouped by area.
+*Login* (or *Register*) saves the token to the `token` variable, and requests that create
+something (a review, a subscription) save its id for the next request, so the collection runs top
+to bottom. Point `baseUrl` at the deployed API to try production.
+
 | Method | Path | Auth | What it does |
 | --- | --- | --- | --- |
 | POST | `/auth/register` | — | Create an account, returns a token |

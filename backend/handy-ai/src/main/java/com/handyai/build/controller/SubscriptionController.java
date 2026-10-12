@@ -5,6 +5,7 @@ import com.handyai.build.dto.SubscriptionResponse;
 import com.handyai.build.dto.SubscriptionResponse.Overview;
 import com.handyai.build.security.CurrentUserProvider;
 import com.handyai.build.service.SubscriptionService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Subscriptions", description = "Plans the signed-in user pays for, with renewal dates (CRUD).")
 @RequestMapping("/api/me/subscriptions")
 public class SubscriptionController {
 

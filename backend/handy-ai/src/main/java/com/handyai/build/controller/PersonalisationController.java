@@ -4,6 +4,7 @@ import com.handyai.build.dto.CategoryResponse;
 import com.handyai.build.dto.ToolResponse;
 import com.handyai.build.security.CurrentUserProvider;
 import com.handyai.build.service.PersonalisationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** The signed-in user's interests, their "for you" feed and their Claude usage. */
 @RestController
+@Tag(name = "Personalisation", description = "Followed categories, the \"for you\" feed and the user's Claude usage.")
 @RequestMapping("/api/me")
 public class PersonalisationController {
 
