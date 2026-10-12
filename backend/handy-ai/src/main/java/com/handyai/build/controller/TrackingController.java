@@ -1,11 +1,10 @@
 package com.handyai.build.controller;
 
 import com.handyai.build.domain.AiTool;
-import com.handyai.build.domain.OutboundClick;
 import com.handyai.build.exception.ResourceNotFoundException;
 import com.handyai.build.repository.AiToolRepository;
-import com.handyai.build.repository.OutboundClickRepository;
 import com.handyai.build.security.CurrentUserProvider;
+import com.handyai.build.service.ClickTracker;
 import com.handyai.build.service.PresenceService;
 import com.handyai.build.support.RecentKeys;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,17 +33,17 @@ public class TrackingController {
 
     private final PresenceService presenceService;
     private final AiToolRepository toolRepository;
-    private final OutboundClickRepository clickRepository;
+    private final ClickTracker clickTracker;
     private final CurrentUserProvider currentUserProvider;
     private final RecentKeys clickDeduper = new RecentKeys(50_000);
     static final Duration CLICK_WINDOW = Duration.ofMinutes(10);
 
     public TrackingController(PresenceService presenceService, AiToolRepository toolRepository,
-                              OutboundClickRepository clickRepository,
+                              ClickTracker clickTracker,
                               CurrentUserProvider currentUserProvider) {
         this.presenceService = presenceService;
         this.toolRepository = toolRepository;
-        this.clickRepository = clickRepository;
+        this.clickTracker = clickTracker;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -58,7 +57,8 @@ public class TrackingController {
     }
 
     /**
-     * Records the hand-off and sends the browser on to the vendor. The destination is always the
+     * Records the hand-off (in the background, see {@link ClickTracker}) and sends the browser on
+     * to the vendor. The destination is always the
      * tool's own stored website, never a URL from the request, so this cannot be used as an open
      * redirect.
      */
@@ -76,11 +76,8 @@ public class TrackingController {
         if (!clickDeduper.firstIn(who, CLICK_WINDOW)) {
             return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(tool.getWebsiteUrl())).build();
         }
-        OutboundClick click = new OutboundClick();
-        click.setTool(tool);
-        click.setSource(source != null && SOURCES.contains(source) ? source : "card");
-        click.setUserId(presenceService.userFor(visitorId));
-        clickRepository.save(click);
+        clickTracker.record(tool.getId(), source != null && SOURCES.contains(source) ? source : "card",
+                presenceService.userFor(visitorId));
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(tool.getWebsiteUrl()))
                 .header("Cache-Control", "no-store")

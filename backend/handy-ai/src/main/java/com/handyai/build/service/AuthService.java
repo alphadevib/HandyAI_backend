@@ -1,5 +1,6 @@
 package com.handyai.build.service;
 
+import com.handyai.build.config.CacheConfig;
 import com.handyai.build.domain.AccountType;
 import com.handyai.build.domain.Role;
 import com.handyai.build.domain.User;
@@ -22,6 +23,7 @@ import com.handyai.build.security.JwtService;
 import com.handyai.build.security.LoginThrottle;
 import com.handyai.build.security.TokenVersions;
 import com.handyai.build.security.PasswordHasher;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -165,7 +167,9 @@ public class AuthService {
     /**
      * Only the fields sent are changed. For an organisation, editing the name, website or
      * registration number (or resubmitting after a rejection) sends the account back for review.
+     * Cached reviews show the author's name, so they are dropped too.
      */
+    @CacheEvict(cacheNames = CacheConfig.REVIEWS, allEntries = true)
     @Transactional
     public UserResponse updateProfile(Long userId, String name, String profession,
                                       String organisationName, String organisationWebsite,

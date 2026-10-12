@@ -1,5 +1,6 @@
 package com.handyai.build.service;
 
+import com.handyai.build.config.CacheConfig;
 import com.handyai.build.domain.AiTool;
 import com.handyai.build.domain.Review;
 import com.handyai.build.domain.User;
@@ -12,6 +13,8 @@ import com.handyai.build.repository.ReviewRepository;
 import com.handyai.build.repository.UserRepository;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +40,8 @@ public class ReviewService {
         this.userRepository = userRepository;
     }
 
+    /** Cached per tool until a review on it is written or removed. */
+    @Cacheable(cacheNames = CacheConfig.REVIEWS, key = "#toolSlug")
     @Transactional(readOnly = true)
     public List<ReviewResponse> listForTool(String toolSlug) {
         AiTool tool = requireTool(toolSlug);
@@ -52,6 +57,7 @@ public class ReviewService {
                 .map(ReviewResponse::from);
     }
 
+    @CacheEvict(cacheNames = CacheConfig.REVIEWS, key = "#toolSlug")
     @Transactional
     public ReviewResponse upsert(String toolSlug, Long userId, ReviewRequest request) {
         AiTool tool = requireTool(toolSlug);
@@ -74,6 +80,7 @@ public class ReviewService {
         return ReviewResponse.from(saved);
     }
 
+    @CacheEvict(cacheNames = CacheConfig.REVIEWS, key = "#toolSlug")
     @Transactional
     public void delete(String toolSlug, Long userId, Long reviewId) {
         AiTool tool = requireTool(toolSlug);

@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,7 +48,9 @@ public class CatalogueSeeder implements ApplicationRunner {
         this.seedDemoUser = seedDemoUser;
     }
 
+    /** New tools change the category counts and price bands, so both caches start over. */
     @Override
+    @CacheEvict(cacheNames = {CacheConfig.CATEGORIES, CacheConfig.PRICE_RANGES}, allEntries = true)
     @Transactional
     public void run(ApplicationArguments args) {
         Map<String, Category> categories = seedCategories();

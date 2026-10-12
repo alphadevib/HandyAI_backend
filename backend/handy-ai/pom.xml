@@ -51,6 +51,11 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-mysql</artifactId>
 		</dependency>
+		<!-- @Cacheable / @CacheEvict over Spring's in-memory cache manager. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
 		<!-- BCrypt password encoding and @PreAuthorize method security. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

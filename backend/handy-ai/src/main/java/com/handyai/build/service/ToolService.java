@@ -1,5 +1,6 @@
 package com.handyai.build.service;
 
+import com.handyai.build.config.CacheConfig;
 import com.handyai.build.domain.AiTool;
 import com.handyai.build.domain.PriceBook.Currency;
 import com.handyai.build.domain.PricingModel;
@@ -17,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.core.TypedPropertyPath;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -159,8 +161,10 @@ public class ToolService {
 
     /**
      * The marketplace's price filter options for one currency: who has a free plan, then monthly
-     * price bands that stop at the band holding the most expensive tool.
+     * price bands that stop at the band holding the most expensive tool. Reads every tool, so the
+     * answer is cached per currency until the catalogue is seeded again.
      */
+    @Cacheable(CacheConfig.PRICE_RANGES)
     @Transactional(readOnly = true)
     public PriceRanges priceRanges(String currency) {
         Currency priceCurrency = parseCurrency(currency);
