@@ -961,7 +961,7 @@
                 "chat"
               ]
             },
-            "description": "Claude writes the reply when HANDYAI_ANTHROPIC_API_KEY is set; otherwise the rule-based reply.",
+            "description": "A local LLM (Ollama) writes the reply when it is running; otherwise the rule-based reply.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"message\": \"I need to edit videos for YouTube\"\n}",
@@ -1168,7 +1168,7 @@
           ]
         },
         {
-          "name": "My Claude usage",
+          "name": "My AI usage",
           "request": {
             "method": "GET",
             "header": [],
@@ -1433,7 +1433,7 @@
           ]
         },
         {
-          "name": "Claude usage and cost today",
+          "name": "AI usage today (tokens and budget)",
           "request": {
             "method": "GET",
             "header": [],

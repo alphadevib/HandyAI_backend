@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 /**
- * How much Claude one user has used: replies, tokens and estimated cost.
+ * How much of the AI assistant one user has used: LLM replies, tokens and estimated cost.
  *
  * <p>A one-to-one with {@link User} that shares the user's primary key ({@code @MapsId}): the row's
  * id is the user id, so there is at most one row per user by construction. Only this side maps the

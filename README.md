@@ -73,11 +73,30 @@ cd backend/handy-ai
 docker compose up --build
 ```
 
-Builds the API image from the `Dockerfile` and starts it with its own MySQL 8.4 container. The
-API waits until MySQL reports healthy. The API is on <http://localhost:8080> and MySQL on
-`localhost:3307`; data is kept in the `mysql-data` volume (`docker compose down -v` removes it).
-Set `HANDYAI_ADMIN_PASSWORD` or `HANDYAI_ANTHROPIC_API_KEY` in your shell or a `.env` file next to
-`docker-compose.yml` to pass them in.
+Builds the API image from the `Dockerfile` and starts it with its own MySQL 8.4 container and an
+Ollama server. The API waits until MySQL and Ollama report healthy. The API is on
+<http://localhost:8080> and MySQL on `localhost:3307`; data is kept in the `mysql-data` volume
+(`docker compose down -v` removes it). The first start also downloads the chat model (`qwen3:8b`,
+about 5 GB) into the `ollama-models` volume. Set `HANDYAI_ADMIN_PASSWORD` or `OLLAMA_MODEL` in your
+shell or a `.env` file next to `docker-compose.yml` to pass them in.
+
+### AI chat with Ollama
+
+The chat assistant writes its replies with a local LLM served by [Ollama](https://ollama.com):
+the backend retrieves the matching tools (vector search), puts them in the prompt, and calls
+Ollama's `POST /api/chat` through `RestTemplate`. No API key is needed.
+
+```bash
+ollama pull qwen3:8b     # once
+ollama serve             # or start the Ollama app
+```
+
+Then run the backend as usual. If Ollama is not running, chat falls back to its rule-based replies.
+Settings live under `handyai.ai.*` in `application.properties`: `HANDYAI_OLLAMA_URL`,
+`HANDYAI_OLLAMA_MODEL` (any pulled model, e.g. `llama3.2` for a smaller download), the token caps,
+and a daily token budget. Today's usage is at `GET /api/admin/ai-usage`. Render's free plan cannot
+run a model, so production stays rule-based unless `HANDYAI_OLLAMA_ENABLED=true` and
+`HANDYAI_OLLAMA_URL` point at a reachable Ollama server.
 
 ### Database changes
 

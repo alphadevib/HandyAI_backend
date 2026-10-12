@@ -2,7 +2,7 @@ package com.handyai.build.service;
 
 import com.handyai.build.ai.AiUsageMeter;
 import com.handyai.build.ai.ChatAssistant;
-import com.handyai.build.ai.ClaudeClient;
+import com.handyai.build.ai.OllamaClient;
 import com.handyai.build.domain.PriceBook.Currency;
 import com.handyai.build.domain.ProfessionCatalog;
 import com.handyai.build.dto.ChatRequest;
@@ -93,7 +93,7 @@ public class ChatService {
     }
 
     /**
-     * Not transactional on purpose: the Claude call can take seconds, and holding a pooled
+     * Not transactional on purpose: the LLM call can take seconds, and holding a pooled
      * database connection for it would starve other requests. Each lookup runs in its own.
      */
     public ChatResponse reply(ChatRequest request, Long currentUserId) {
@@ -203,8 +203,8 @@ public class ChatService {
 
         String reply = replyText(picks, result.summary(), goal, effectiveProfession, freePlanOnly,
                 maxMonthly, currency, wantsMore);
-        // With an Anthropic key configured, Claude rewrites the reply from the retrieved tools.
-        Optional<ClaudeClient.Reply> written = chatAssistant.compose(new ChatAssistant.Turn(
+        // With Ollama switched on, the local model rewrites the reply from the retrieved tools.
+        Optional<OllamaClient.Reply> written = chatAssistant.compose(new ChatAssistant.Turn(
                 original, goal, effectiveProfession, freePlanOnly, maxMonthly, currency,
                 picks.stream().map(Recommendation::tool).toList()));
         if (written.isPresent()) {
@@ -286,7 +286,7 @@ public class ChatService {
         return chips;
     }
 
-    private void recordUsage(Long userId, ClaudeClient.Reply reply) {
+    private void recordUsage(Long userId, OllamaClient.Reply reply) {
         if (userId == null) {
             return;
         }

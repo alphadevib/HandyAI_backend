@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** The admin dashboard. Guests get a 401 and signed-in non-admins a 403 (GlobalExceptionHandler). */
 @RestController
-@Tag(name = "Admin", description = "Dashboard numbers, organisation reviews and Claude spend. Admin role only.")
+@Tag(name = "Admin", description = "Dashboard numbers, organisation reviews and AI usage. Admin role only.")
 @RequestMapping("/api/admin")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
@@ -41,7 +41,7 @@ public class AdminController {
         return statsService.stats();
     }
 
-    /** Today's Claude tokens and estimated cost against the daily budget. */
+    /** Today's LLM tokens and estimated cost against the daily token budget. */
     @GetMapping("/ai-usage")
     public AiUsageMeter.Snapshot aiUsage() {
         return aiUsageMeter.snapshot();

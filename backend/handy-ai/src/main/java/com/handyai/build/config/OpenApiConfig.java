@@ -29,7 +29,7 @@ public class OpenApiConfig {
                         .title("HandyAI API")
                         .version("v1")
                         .description("Find, compare and track AI tools: catalogue, semantic search, "
-                                + "recommendations, a Claude-backed chat assistant, reviews, saved "
+                                + "recommendations, an LLM chat assistant (Ollama), reviews, saved "
                                 + "tools and subscription tracking.")
                         .license(new License().name("Private")))
                 .components(new Components().addSecuritySchemes(BEARER, new SecurityScheme()

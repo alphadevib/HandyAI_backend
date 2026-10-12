@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * What HandyAI knows about one signed-in user beyond their profile: the categories they follow,
- * the feed built from them, and how much Claude they have used.
+ * the feed built from them, and how much of the AI assistant they have used.
  */
 @Service
 public class PersonalisationService {
@@ -97,7 +97,7 @@ public class PersonalisationService {
     }
 
     /**
-     * Adds one Claude reply to the user's totals: an atomic update when the row exists, otherwise
+     * Adds one AI-written reply to the user's totals: an atomic update when the row exists, otherwise
      * the user's first row. Two first replies at once can race on that insert; the loser gets a
      * DataIntegrityViolationException and the caller tries once more, which takes the update.
      */

@@ -8,9 +8,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Counts Claude tokens and estimates their cost per UTC day, and enforces the daily budget: once
- * the estimate reaches {@link AiProperties#dailyBudgetUsd()}, chat falls back to its rule-based
- * replies until the next day. In memory, so each instance keeps its own tally.
+ * Counts LLM tokens per UTC day, estimates what they cost, and enforces the daily token budget:
+ * once {@link AiProperties#dailyTokenBudget()} is used up, chat falls back to its rule-based replies
+ * until the next day. On your own machine the cost is zero, but the budget still caps how much CPU or
+ * GPU time chat can take. In memory, so each instance keeps its own tally.
  */
 @Component
 public class AiUsageMeter {
@@ -23,10 +24,14 @@ public class AiUsageMeter {
         static Usage empty(LocalDate date) {
             return new Usage(date, 0, 0, 0, 0);
         }
+
+        public long totalTokens() {
+            return inputTokens + outputTokens;
+        }
     }
 
     /** Today's numbers next to the settings that bound them, for the admin dashboard. */
-    public record Snapshot(boolean enabled, String model, Usage today, double dailyBudgetUsd,
+    public record Snapshot(boolean enabled, String model, Usage today, long dailyTokenBudget,
                            int maxTokensPerReply) {
     }
 
@@ -43,7 +48,7 @@ public class AiUsageMeter {
                 + outputTokens * properties.outputUsdPerMillion() / 1_000_000d;
     }
 
-    /** Every billed call is recorded, including ones whose answer was not used. */
+    /** Every answered call is recorded, including ones whose reply was not used. */
     public void record(long inputTokens, long outputTokens) {
         double cost = costUsd(inputTokens, outputTokens);
         Usage updated = today.updateAndGet(usage -> {
@@ -52,18 +57,18 @@ public class AiUsageMeter {
                     current.inputTokens() + inputTokens, current.outputTokens() + outputTokens,
                     current.costUsd() + cost);
         });
-        log.info("Claude call: {} input + {} output tokens, ~${} (today ~${} of ${})",
-                inputTokens, outputTokens, String.format("%.4f", cost),
-                String.format("%.4f", updated.costUsd()), properties.dailyBudgetUsd());
+        log.info("LLM call ({}): {} input + {} output tokens; today {} of {} tokens, ~${}",
+                properties.model(), inputTokens, outputTokens, updated.totalTokens(),
+                properties.dailyTokenBudget(), String.format("%.4f", updated.costUsd()));
     }
 
     public boolean withinBudget() {
-        return rolled(today.get()).costUsd() < properties.dailyBudgetUsd();
+        return rolled(today.get()).totalTokens() < properties.dailyTokenBudget();
     }
 
     public Snapshot snapshot() {
         return new Snapshot(properties.enabled(), properties.model(), rolled(today.get()),
-                properties.dailyBudgetUsd(), properties.maxTokens());
+                properties.dailyTokenBudget(), properties.maxTokens());
     }
 
     private static Usage rolled(Usage usage) {

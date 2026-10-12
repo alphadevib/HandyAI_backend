@@ -11,11 +11,14 @@ import org.springframework.web.client.RestTemplate;
 @EnableConfigurationProperties(AiProperties.class)
 public class AiConfig {
 
-    /** The HTTP client for the Anthropic API, with timeouts so a slow reply cannot pile up threads. */
+    /**
+     * The HTTP client for the Ollama API. A short connect timeout means a stopped Ollama costs the
+     * chat a moment, not a hang; the read timeout allows for a model being loaded into memory.
+     */
     @Bean
-    public RestTemplate anthropicRestTemplate(AiProperties properties) {
+    public RestTemplate ollamaRestTemplate(AiProperties properties) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(5));
+        factory.setConnectTimeout(Duration.ofSeconds(2));
         factory.setReadTimeout(Duration.ofSeconds(properties.timeoutSeconds()));
         return new RestTemplate(factory);
     }

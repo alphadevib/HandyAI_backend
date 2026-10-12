@@ -32,8 +32,11 @@ services:
         value: https://ib11.vercel.app
       - key: HANDYAI_ADMIN_PASSWORD
         sync: false
-      # Claude-written chat replies; leave empty to keep the rule-based replies.
-      - key: HANDYAI_ANTHROPIC_API_KEY
+      # LLM chat replies need a reachable Ollama server (Render's free plan cannot run one). Leave
+      # these unset to keep the rule-based replies.
+      - key: HANDYAI_OLLAMA_ENABLED
+        sync: false
+      - key: HANDYAI_OLLAMA_URL
         sync: false
       - key: MYSQL_HOST
         sync: false

@@ -17,16 +17,16 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 /**
- * Writes the chat reply with Claude using retrieval-augmented generation (RAG):
+ * Writes the chat reply with a local LLM (Ollama) using retrieval-augmented generation (RAG):
  * <ol>
  *   <li><b>Retrieve</b>: the tools the recommender picked (shown to the user as cards), plus the
  *   nearest tools from the {@link ToolVectorIndex} that also pass the user's price filters.</li>
  *   <li><b>Fit the token budget</b>: tools are added in order until the estimated prompt size
  *   reaches {@link AiProperties#contextTokenBudget()}, and long descriptions are clipped.</li>
- *   <li><b>Inject and generate</b>: the tools go into the prompt as the only facts Claude may use,
- *   and Claude writes a short Markdown answer.</li>
+ *   <li><b>Inject and generate</b>: the tools go into the prompt as the only facts the model may
+ *   use, and it writes a short Markdown answer.</li>
  * </ol>
- * Returns empty whenever Claude is off, over budget or fails; the chat then keeps its rule-based
+ * Returns empty whenever the model is off, over budget or fails; the chat then keeps its rule-based
  * reply, so the cards and the conversation never depend on the API.
  */
 @Service
@@ -56,24 +56,24 @@ public class ChatAssistant {
                        Double maxMonthly, Currency currency, List<ToolResponse> picks) {
     }
 
-    private final ClaudeClient claude;
+    private final OllamaClient llm;
     private final ToolVectorIndex vectorIndex;
     private final AiToolRepository toolRepository;
     private final AiProperties properties;
 
-    public ChatAssistant(ClaudeClient claude, ToolVectorIndex vectorIndex,
+    public ChatAssistant(OllamaClient llm, ToolVectorIndex vectorIndex,
                          AiToolRepository toolRepository, AiProperties properties) {
-        this.claude = claude;
+        this.llm = llm;
         this.vectorIndex = vectorIndex;
         this.toolRepository = toolRepository;
         this.properties = properties;
     }
 
-    public Optional<ClaudeClient.Reply> compose(Turn turn) {
-        if (!claude.available()) {
+    public Optional<OllamaClient.Reply> compose(Turn turn) {
+        if (!llm.available()) {
             return Optional.empty();
         }
-        return claude.complete(SYSTEM_PROMPT, userMessage(turn));
+        return llm.complete(SYSTEM_PROMPT, userMessage(turn));
     }
 
     String userMessage(Turn turn) {

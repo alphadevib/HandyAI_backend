@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** The signed-in user's interests, their "for you" feed and their Claude usage. */
+/** The signed-in user's interests, their "for you" feed and their AI usage. */
 @RestController
-@Tag(name = "Personalisation", description = "Followed categories, the \"for you\" feed and the user's Claude usage.")
+@Tag(name = "Personalisation", description = "Followed categories, the \"for you\" feed and the user's AI usage.")
 @RequestMapping("/api/me")
 public class PersonalisationController {
 

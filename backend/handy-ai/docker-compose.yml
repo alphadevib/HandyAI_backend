@@ -1,4 +1,4 @@
-# The API and its own MySQL in containers, for running HandyAI locally the way it runs in production:
+# The API, its own MySQL and an Ollama LLM server in containers, for running HandyAI locally:
 #
 #   cd backend/handy-ai
 #   docker compose up --build
@@ -6,7 +6,11 @@
 # The API is then on http://localhost:8080 and MySQL on localhost:3307 (3307 so it never clashes
 # with a MySQL already installed on the machine). Data lives in the "mysql-data" volume and survives
 # restarts; "docker compose down -v" deletes it. Every setting below can be overridden from the shell
-# or a .env file next to this one, e.g. HANDYAI_ADMIN_PASSWORD or HANDYAI_ANTHROPIC_API_KEY.
+# or a .env file next to this one, e.g. HANDYAI_ADMIN_PASSWORD or OLLAMA_MODEL.
+#
+# The first start downloads the chat model (qwen3:8b is about 5 GB) into the "ollama-models"
+# volume; the chat answers with its rule-based replies until the download finishes. Without an
+# NVIDIA GPU the model runs on the CPU: it works, just slower.
 name: handyai
 
 services:
@@ -30,10 +34,35 @@ services:
       retries: 30
       start_period: 20s
 
+  ollama:
+    image: ollama/ollama:0.34.1
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # One-shot: pulls the chat model into the shared volume, then exits. Already-pulled is a no-op.
+  ollama-pull:
+    image: ollama/ollama:0.34.1
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-qwen3:8b}"]
+    restart: "no"
+
   api:
     build: .
     depends_on:
       mysql:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     environment:
       # The "mysql" profile: a local MySQL without TLS, demo account included.
@@ -45,10 +74,13 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-handyai-dev-password}
       HANDYAI_JWT_SECRET: ${HANDYAI_JWT_SECRET:-docker-compose-development-secret-key-32+}
       HANDYAI_ADMIN_PASSWORD: ${HANDYAI_ADMIN_PASSWORD:-}
-      HANDYAI_ANTHROPIC_API_KEY: ${HANDYAI_ANTHROPIC_API_KEY:-}
+      HANDYAI_OLLAMA_ENABLED: "true"
+      HANDYAI_OLLAMA_URL: http://ollama:11434
+      HANDYAI_OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
     ports:
       - "8080:8080"
     restart: unless-stopped
 
 volumes:
   mysql-data:
+  ollama-models:
