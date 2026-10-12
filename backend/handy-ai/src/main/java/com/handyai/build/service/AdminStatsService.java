@@ -1,11 +1,9 @@
 package com.handyai.build.service;
 
 import com.handyai.build.domain.AccountType;
-import com.handyai.build.domain.Role;
 import com.handyai.build.domain.Subscription;
 import com.handyai.build.domain.User;
 import com.handyai.build.domain.VerificationStatus;
-import com.handyai.build.exception.ForbiddenException;
 import com.handyai.build.repository.OutboundClickRepository;
 import com.handyai.build.repository.SubscriptionRepository;
 import com.handyai.build.repository.SuggestionRepository;
@@ -67,20 +65,6 @@ public class AdminStatsService {
     public record Stats(Instant generatedAt, PresenceService.LiveCount live, Users users,
                         Redirects redirects, TrackedSubscriptions subscriptions,
                         long newSuggestions, List<Activity> recent) {
-    }
-
-    /**
-     * The admin check reads the role from the database rather than the token, so an account that
-     * lost the admin role is locked out at once instead of when its token expires.
-     */
-    @Transactional(readOnly = true)
-    public void requireAdmin(Long userId) {
-        boolean admin = userRepository.findById(userId)
-                .map(user -> user.getRole() == Role.ADMIN)
-                .orElse(false);
-        if (!admin) {
-            throw new ForbiddenException("Only the HandyAI admin can see this");
-        }
     }
 
     @Transactional(readOnly = true)

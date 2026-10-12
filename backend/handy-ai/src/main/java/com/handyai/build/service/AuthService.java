@@ -112,6 +112,9 @@ public class AuthService {
             throw new UnauthorizedException("Email or password is incorrect");
         }
         loginThrottle.recordSuccess(email, address);
+        // Accounts from before the BCrypt switch get a BCrypt hash now that the password is known.
+        passwordHasher.rehash(request.password(), user.getPasswordHash())
+                .ifPresent(hash -> userRepository.updatePasswordHash(user.getId(), hash));
         if (!user.isEmailVerified()) {
             throw new EmailNotVerifiedException("Confirm your email first: we sent a link to " + email
                     + ". No email? Ask for a new link below.");

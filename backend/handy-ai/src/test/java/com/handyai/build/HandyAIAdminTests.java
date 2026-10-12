@@ -8,7 +8,6 @@ import com.handyai.build.domain.Role;
 import com.handyai.build.domain.User;
 import com.handyai.build.dto.LoginRequest;
 import com.handyai.build.dto.RegisterRequest;
-import com.handyai.build.exception.ForbiddenException;
 import com.handyai.build.exception.TooManyRequestsException;
 import com.handyai.build.exception.UnauthorizedException;
 import com.handyai.build.repository.UserRepository;
@@ -59,12 +58,12 @@ class HandyAIAdminTests {
         User other = userRepository.findById(intruder).orElseThrow();
         other.setRole(Role.ADMIN);
         userRepository.save(other);
+        int versionWhileAdmin = other.getTokenVersion();
         adminInitializer.run(null);
-        assertThat(userRepository.findById(intruder).orElseThrow().getRole()).isEqualTo(Role.USER);
-
-        assertThatThrownBy(() -> statsService.requireAdmin(intruder))
-                .isInstanceOf(ForbiddenException.class);
-        statsService.requireAdmin(admin.getId());
+        User demoted = userRepository.findById(intruder).orElseThrow();
+        assertThat(demoted.getRole()).isEqualTo(Role.USER);
+        // Its tokens still say ADMIN, so they are revoked along with the role.
+        assertThat(demoted.getTokenVersion()).isGreaterThan(versionWhileAdmin);
     }
 
     @Test

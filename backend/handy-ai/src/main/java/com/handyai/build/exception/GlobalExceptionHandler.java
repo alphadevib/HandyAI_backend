@@ -10,6 +10,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationTrustResolver;
+import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -30,6 +34,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final AuthenticationTrustResolver TRUST_RESOLVER = new AuthenticationTrustResolverImpl();
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex,
@@ -138,6 +143,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleForbidden(ForbiddenException ex,
                                                             HttpServletRequest request) {
         return status(HttpStatus.FORBIDDEN, ex.getMessage(), request);
+    }
+
+    /**
+     * A {@code @PreAuthorize} check said no: a guest is asked to sign in (401), a signed-in user
+     * without the role is refused (403).
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(HttpServletRequest request) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || TRUST_RESOLVER.isAnonymous(authentication)) {
+            return status(HttpStatus.UNAUTHORIZED, "Sign in to continue", request);
+        }
+        return status(HttpStatus.FORBIDDEN, "Only the HandyAI admin can see this", request);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

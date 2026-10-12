@@ -8,8 +8,11 @@ import com.handyai.build.domain.VerificationStatus;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
@@ -34,4 +37,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("select u.tokenVersion from User u where u.id = :id")
     Optional<Integer> findTokenVersion(@Param("id") Long id);
+
+    /** Its own transaction, because sign-in (which upgrades old hashes) is read-only. */
+    @Modifying
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Query("update User u set u.passwordHash = :hash where u.id = :id")
+    int updatePasswordHash(@Param("id") Long id, @Param("hash") String hash);
 }

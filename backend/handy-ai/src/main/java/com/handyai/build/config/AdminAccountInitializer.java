@@ -48,6 +48,8 @@ public class AdminAccountInitializer implements ApplicationRunner {
         for (User user : userRepository.findByRole(Role.ADMIN)) {
             if (!user.getEmail().equalsIgnoreCase(adminEmail)) {
                 user.setRole(Role.USER);
+                // Tokens carry the role @PreAuthorize checks, so the old ADMIN tokens must die.
+                user.setTokenVersion(user.getTokenVersion() + 1);
                 log.warn("Removed the admin role from {}: only {} may be admin", user.getEmail(),
                         adminEmail);
             }
@@ -70,9 +72,14 @@ public class AdminAccountInitializer implements ApplicationRunner {
             log.info("Created the admin account {}", adminEmail);
             return created;
         });
-        admin.setRole(Role.ADMIN);
+        if (admin.getRole() != Role.ADMIN) {
+            // Tokens issued while this account was a plain user must not miss the new role.
+            admin.setRole(Role.ADMIN);
+            admin.setTokenVersion(admin.getTokenVersion() + 1);
+        }
         if (admin.getPasswordHash() == null
-                || !passwordHasher.matches(adminPassword, admin.getPasswordHash())) {
+                || !passwordHasher.matches(adminPassword, admin.getPasswordHash())
+                || passwordHasher.rehash(adminPassword, admin.getPasswordHash()).isPresent()) {
             admin.setPasswordHash(passwordHasher.hash(adminPassword));
         }
         userRepository.save(admin);

@@ -1,7 +1,6 @@
 package com.handyai.build.controller;
 
 import com.handyai.build.security.CurrentUserProvider;
-import com.handyai.build.service.AdminStatsService;
 import com.handyai.build.service.SuggestionService;
 import com.handyai.build.service.SuggestionService.SuggestionView;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,14 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class SuggestionController {
 
     private final SuggestionService suggestionService;
-    private final AdminStatsService adminStatsService;
     private final CurrentUserProvider currentUserProvider;
 
     public SuggestionController(SuggestionService suggestionService,
-                                AdminStatsService adminStatsService,
                                 CurrentUserProvider currentUserProvider) {
         this.suggestionService = suggestionService;
-        this.adminStatsService = adminStatsService;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -49,19 +46,15 @@ public class SuggestionController {
     }
 
     @GetMapping("/admin/suggestions")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<SuggestionView> list(@RequestParam(required = false) String status) {
-        requireAdmin();
         return suggestionService.list(status);
     }
 
     @PutMapping("/admin/suggestions/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public SuggestionView update(@PathVariable Long id, @RequestBody StatusRequest request) {
-        requireAdmin();
         return suggestionService.updateStatus(id, request.status());
-    }
-
-    private void requireAdmin() {
-        adminStatsService.requireAdmin(currentUserProvider.requireUserId());
     }
 
     public record SubmitRequest(

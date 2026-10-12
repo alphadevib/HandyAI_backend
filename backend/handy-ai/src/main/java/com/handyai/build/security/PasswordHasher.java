@@ -1,62 +1,102 @@
 package com.handyai.build.security;
 
+import com.handyai.build.exception.BadRequestException;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
+import java.util.Map;
+import java.util.Optional;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
- * PBKDF2-WithHmacSHA256 password hashing built on the JDK only, so the project keeps its current
- * dependency set. Stored format: {@code pbkdf2$<iterations>$<salt-b64>$<hash-b64>}.
+ * Password hashing with the BCrypt {@link PasswordEncoder} from {@code SecurityConfig}.
+ *
+ * <p>Accounts created before the switch to BCrypt hold PBKDF2-WithHmacSHA256 hashes in the form
+ * {@code pbkdf2$<iterations>$<salt-b64>$<hash-b64>}. Those still verify, and {@link #rehash} hands
+ * sign-in a BCrypt replacement, so every account moves over the next time its owner signs in.
  */
 @Component
 public class PasswordHasher {
 
-    private static final String ALGORITHM = "PBKDF2WithHmacSHA256";
-    private static final int ITERATIONS = 210_000;
-    private static final int KEY_LENGTH_BITS = 256;
-    private static final int SALT_BYTES = 16;
-    private static final String PREFIX = "pbkdf2";
+    /** BCrypt reads only the first 72 bytes; anything longer would be silently truncated. */
+    static final int MAX_PASSWORD_BYTES = 72;
 
-    private final SecureRandom random = new SecureRandom();
+    private static final String LEGACY_ALGORITHM = "PBKDF2WithHmacSHA256";
+    private static final String LEGACY_PREFIX = "pbkdf2";
+    private static final int LEGACY_KEY_LENGTH_BITS = 256;
 
-    public String hash(String rawPassword) {
-        byte[] salt = new byte[SALT_BYTES];
-        random.nextBytes(salt);
-        byte[] hash = derive(rawPassword, salt, ITERATIONS);
-        return String.join("$", PREFIX, String.valueOf(ITERATIONS),
-                Base64.getEncoder().encodeToString(salt),
-                Base64.getEncoder().encodeToString(hash));
+    private final PasswordEncoder encoder;
+
+    public PasswordHasher(PasswordEncoder encoder) {
+        this.encoder = encoder;
     }
 
-    /** Constant-time comparison; returns false instead of throwing on a malformed stored value. */
+    public String hash(String rawPassword) {
+        if (!fits(rawPassword)) {
+            throw new BadRequestException("Password is too long",
+                    Map.of("password", "Use at most 72 characters (fewer with emoji or accents)"));
+        }
+        return encoder.encode(rawPassword);
+    }
+
+    /** Returns false instead of throwing on a malformed stored value. */
     public boolean matches(String rawPassword, String storedHash) {
         if (rawPassword == null || storedHash == null) {
             return false;
         }
+        if (isLegacy(storedHash)) {
+            return matchesLegacy(rawPassword, storedHash);
+        }
+        try {
+            return encoder.matches(rawPassword, storedHash);
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
+    }
+
+    /**
+     * A BCrypt hash to store in place of {@code storedHash}, when that one is PBKDF2 or uses a
+     * weaker BCrypt cost. Call only after {@link #matches} succeeded for {@code rawPassword}.
+     */
+    public Optional<String> rehash(String rawPassword, String storedHash) {
+        boolean outdated = isLegacy(storedHash) || encoder.upgradeEncoding(storedHash);
+        return outdated && fits(rawPassword) ? Optional.of(encoder.encode(rawPassword)) : Optional.empty();
+    }
+
+    private static boolean fits(String rawPassword) {
+        return rawPassword.getBytes(StandardCharsets.UTF_8).length <= MAX_PASSWORD_BYTES;
+    }
+
+    private static boolean isLegacy(String storedHash) {
+        return storedHash.startsWith(LEGACY_PREFIX + "$");
+    }
+
+    /** Constant-time comparison against a PBKDF2 hash from before the BCrypt switch. */
+    private static boolean matchesLegacy(String rawPassword, String storedHash) {
         String[] parts = storedHash.split("\\$");
-        if (parts.length != 4 || !PREFIX.equals(parts[0])) {
+        if (parts.length != 4) {
             return false;
         }
         try {
             int iterations = Integer.parseInt(parts[1]);
             byte[] salt = Base64.getDecoder().decode(parts[2]);
             byte[] expected = Base64.getDecoder().decode(parts[3]);
-            byte[] actual = derive(rawPassword, salt, iterations);
+            byte[] actual = deriveLegacy(rawPassword, salt, iterations);
             return java.security.MessageDigest.isEqual(expected, actual);
         } catch (IllegalArgumentException ex) {
             return false;
         }
     }
 
-    private byte[] derive(String rawPassword, byte[] salt, int iterations) {
+    private static byte[] deriveLegacy(String rawPassword, byte[] salt, int iterations) {
         PBEKeySpec spec = new PBEKeySpec(rawPassword.toCharArray(), salt, iterations,
-                KEY_LENGTH_BITS);
+                LEGACY_KEY_LENGTH_BITS);
         try {
-            return SecretKeyFactory.getInstance(ALGORITHM).generateSecret(spec).getEncoded();
+            return SecretKeyFactory.getInstance(LEGACY_ALGORITHM).generateSecret(spec).getEncoded();
         } catch (NoSuchAlgorithmException | InvalidKeySpecException ex) {
             throw new IllegalStateException("Unable to hash password", ex);
         } finally {
